@@ -23,7 +23,7 @@ public class SkytapTemplate {
 
     public SkytapTemplate(String ID)
             {
-                SkytapTemplate skytpl= RestAPICall.GetTemplate(ID);
+                SkytapTemplate skytpl= SkytapRestAPICall.GetTemplate(ID);
                 this.tpl_ID=skytpl.tpl_ID;
                 this.tpl_Desc= skytpl.tpl_Desc;
                 this.tpl_name= skytpl.tpl_name;
@@ -40,7 +40,7 @@ public class SkytapTemplate {
                    {
                      Logger.getLogger(SkytapTemplate.class.getName()).log(Level.SEVERE, null, ex);
                    }
-                String status= (RestAPICall.GetTemplate(this.tpl_ID)).tpl_busy;
+                String status= (SkytapRestAPICall.GetTemplate(this.tpl_ID)).tpl_busy;
                 
                 if(status!="null")
                 {
@@ -69,7 +69,7 @@ public class SkytapTemplate {
              return null;
          }
          
-         SkytapVM NewVM=RestAPICall.CreateVMfromTpl(this.tpl_ID);
+         SkytapVM NewVM=SkytapRestAPICall.CreateVMfromTpl(this.tpl_ID);
           
          String NewVMID= NewVM.VMID1;
          

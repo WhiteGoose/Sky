@@ -112,7 +112,7 @@ public  class BasicAPICall {
 	 * @param AuthToken
 	 * @return
 	 */
-	public static HttpGet buildHttpGetRequest(String requestUrl,
+public static HttpGet buildHttpGetRequest(String requestUrl,
 			String AuthToken) {
 
 		HttpGet hg = new HttpGet(requestUrl);
@@ -141,7 +141,7 @@ public  class BasicAPICall {
 	 * @param AuthToken
 	 * @return
 	 */
-	public static HttpPost buildHttpPostRequest(String requestUrl,
+public static HttpPost buildHttpPostRequest(String requestUrl,
 			String AuthToken) {
 
 		HttpPost hp = new HttpPost(requestUrl);
@@ -155,6 +155,101 @@ public  class BasicAPICall {
 
 		return hp;
 	}
+ public static String executeHttpRequest(HttpRequestBase hr)
+			throws SkytapException {
+
+		boolean retryHttpRequest = true;
+		int retryCount = 1;
+		String responseString = "";
+		while (retryHttpRequest == true) {
+			HttpClient httpclient = new DefaultHttpClient();
+			//
+			// Set timeouts for httpclient requests to 60 seconds
+			//
+			HttpConnectionParams.setConnectionTimeout(httpclient.getParams(),
+					60000);
+			HttpConnectionParams.setSoTimeout(httpclient.getParams(), 60000);
+			//
+			responseString = "";
+			HttpResponse response = null;
+			try {
+				Date myDate = new Date();
+				SimpleDateFormat sdf = new SimpleDateFormat(
+						"yyyy-MM-dd:HH-mm-ss");
+				String myDateString = sdf.format(myDate);
+
+				JenkinsLogger.log(myDateString + "\n" + "Executing Request: "
+						+ hr.getRequestLine());
+				response = httpclient.execute(hr);
+
+				String responseStatusLine = response.getStatusLine().toString();
+				if (responseStatusLine.contains("423 Locked")) {
+					retryCount = retryCount + 1;
+					if (retryCount > 5) {
+						retryHttpRequest = false;
+						JenkinsLogger
+								.error("Object busy too long - giving up.");
+					} else {
+						JenkinsLogger.log("Object busy - Retrying...");
+						try {
+							Thread.sleep(15000);
+						} catch (InterruptedException e1) {
+							JenkinsLogger.error(e1.getMessage());
+						}
+					}
+				} else if (responseStatusLine.contains("409 Conflict")) {
+
+					throw new SkytapException(responseStatusLine);
+
+				} else {
+
+					JenkinsLogger.log(response.getStatusLine().toString());
+					HttpEntity entity = response.getEntity();
+					responseString = EntityUtils.toString(entity, "UTF-8");
+					retryHttpRequest = false;
+				}
+
+			}/* catch (HttpResponseException e) {
+				retryHttpRequest = false;
+				JenkinsLogger.error("HTTP Response Code: " + e.getStatusCode());
+
+			}*/ catch (InterruptedIOException e) {
+				Date myDate = new Date();
+				SimpleDateFormat sdf = new SimpleDateFormat(
+						"yyyy-MM-dd:HH-mm-ss");
+				String myDateString = sdf.format(myDate);
+
+				retryCount = retryCount + 1;
+				if (retryCount > 5) {
+					retryHttpRequest = false;
+					JenkinsLogger.error("API Timeout - giving up. "
+							+ e.getMessage());
+				} else {
+					JenkinsLogger.log(myDateString + "\n" + e.getMessage()
+							+ "\n" + "API Timeout - Retrying...");
+				}
+			} catch (IOException e) {
+				retryHttpRequest = false;
+				JenkinsLogger.error(e.getMessage());
+			} finally {
+				if (response != null) {
+					// response will be null if this is a timeout retry
+					HttpEntity entity = response.getEntity();
+					try {
+						responseString = EntityUtils.toString(entity, "UTF-8");
+					} catch (IOException e) {
+						JenkinsLogger.error(e.getMessage());
+					}
+				}
+
+				httpclient.getConnectionManager().shutdown();
+			}
+		}
+
+		return responseString;
+
+	}
+ 
 
 
 }

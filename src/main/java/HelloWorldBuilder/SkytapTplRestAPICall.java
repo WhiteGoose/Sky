@@ -29,7 +29,7 @@ import org.apache.http.util.EntityUtils;
  *
  * @author Administrator
  */
-public class SkytapRestAPICall {
+public class SkytapTplRestAPICall {
         private static String buildCheckTemplateURL(String id) {
 
         JenkinsLogger.log("Building request url ...");
@@ -44,106 +44,13 @@ public class SkytapRestAPICall {
         // https://cloud.skytap.com/templates/322249
     }
 
-    public static String executeHttpRequest(HttpRequestBase hr)
-			throws SkytapException {
-
-		boolean retryHttpRequest = true;
-		int retryCount = 1;
-		String responseString = "";
-		while (retryHttpRequest == true) {
-			HttpClient httpclient = new DefaultHttpClient();
-			//
-			// Set timeouts for httpclient requests to 60 seconds
-			//
-			HttpConnectionParams.setConnectionTimeout(httpclient.getParams(),
-					60000);
-			HttpConnectionParams.setSoTimeout(httpclient.getParams(), 60000);
-			//
-			responseString = "";
-			HttpResponse response = null;
-			try {
-				Date myDate = new Date();
-				SimpleDateFormat sdf = new SimpleDateFormat(
-						"yyyy-MM-dd:HH-mm-ss");
-				String myDateString = sdf.format(myDate);
-
-				JenkinsLogger.log(myDateString + "\n" + "Executing Request: "
-						+ hr.getRequestLine());
-				response = httpclient.execute(hr);
-
-				String responseStatusLine = response.getStatusLine().toString();
-				if (responseStatusLine.contains("423 Locked")) {
-					retryCount = retryCount + 1;
-					if (retryCount > 5) {
-						retryHttpRequest = false;
-						JenkinsLogger
-								.error("Object busy too long - giving up.");
-					} else {
-						JenkinsLogger.log("Object busy - Retrying...");
-						try {
-							Thread.sleep(15000);
-						} catch (InterruptedException e1) {
-							JenkinsLogger.error(e1.getMessage());
-						}
-					}
-				} else if (responseStatusLine.contains("409 Conflict")) {
-
-					throw new SkytapException(responseStatusLine);
-
-				} else {
-
-					JenkinsLogger.log(response.getStatusLine().toString());
-					HttpEntity entity = response.getEntity();
-					responseString = EntityUtils.toString(entity, "UTF-8");
-					retryHttpRequest = false;
-				}
-
-			}/* catch (HttpResponseException e) {
-				retryHttpRequest = false;
-				JenkinsLogger.error("HTTP Response Code: " + e.getStatusCode());
-
-			}*/ catch (InterruptedIOException e) {
-				Date myDate = new Date();
-				SimpleDateFormat sdf = new SimpleDateFormat(
-						"yyyy-MM-dd:HH-mm-ss");
-				String myDateString = sdf.format(myDate);
-
-				retryCount = retryCount + 1;
-				if (retryCount > 5) {
-					retryHttpRequest = false;
-					JenkinsLogger.error("API Timeout - giving up. "
-							+ e.getMessage());
-				} else {
-					JenkinsLogger.log(myDateString + "\n" + e.getMessage()
-							+ "\n" + "API Timeout - Retrying...");
-				}
-			} catch (IOException e) {
-				retryHttpRequest = false;
-				JenkinsLogger.error(e.getMessage());
-			} finally {
-				if (response != null) {
-					// response will be null if this is a timeout retry
-					HttpEntity entity = response.getEntity();
-					try {
-						responseString = EntityUtils.toString(entity, "UTF-8");
-					} catch (IOException e) {
-						JenkinsLogger.error(e.getMessage());
-					}
-				}
-
-				httpclient.getConnectionManager().shutdown();
-			}
-		}
-
-		return responseString;
-
-	}
+   
     
     public static SkytapTemplate GetTemplate(String templateID)//This function Not been implemented yet
     {
         //SkytapTemplate skyTpl; 
         
-          Boolean templateAvailable = false;
+        Boolean templateAvailable = false;
 
         JenkinsLogger.log("Checking availability of template with id: "
                 + templateID);
@@ -163,7 +70,7 @@ public class SkytapRestAPICall {
         try {
             int attemptsTime = 0;
             while (!templateAvailable && (attemptsTime < NUMBER_OF_RETRIES)) {
-                httpRespBody = executeHttpRequest(hg);
+                httpRespBody = BasicAPICall.executeHttpRequest(hg);
 
                 JsonElement je = parser.parse(httpRespBody);
                 JsonObject jo = je.getAsJsonObject();
@@ -211,9 +118,17 @@ public class SkytapRestAPICall {
         return skyTpl;
     }
     
-    public static SkytapVM CreateVMfromTpl(String tplID)//This function Not been implemented yet
+    public static SkytapVM CreateVMfromTpl(String templateID)//This function Not been implemented yet
     {
-        SkytapTemplate skyVM; 
-        return null;
+//       JenkinsLogger.log("Create environment by template with id: " + templateID);
+       
+       SkytapVM skyvm=null;
+       
+       String requestURL = buildCheckTemplateURL(templateID);
+       String authCredentials = BasicAPICall.getAuthentication();
+       
+       
+       return skyvm;
+
     }
 }
